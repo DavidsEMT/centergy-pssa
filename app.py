@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 import plotly.express as px
-
+st.write("v2.0 Authentication Test - " + datetime.now().strftime("%H:%M:%S"))
 # Page config with custom title
 st.set_page_config(page_title="Centergy Group Project Success Simulator", layout="centered", page_icon="🟢")
 
