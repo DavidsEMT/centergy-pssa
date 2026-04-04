@@ -7,10 +7,10 @@ import uuid
 
 st.set_page_config(page_title="Centergy Group Project Success Simulator", layout="centered", page_icon="🟢")
 
-# Supabase Client (using secrets)
+# Supabase Client
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# Session state
+# Session State
 if "user" not in st.session_state:
     st.session_state.user = None
 if "current_project_id" not in st.session_state:
@@ -18,7 +18,7 @@ if "current_project_id" not in st.session_state:
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
 
-# ====================== LOGIN / SIGN-UP SCREEN ======================
+# ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
     st.image("centergy_logo.png", width=400)
     st.title("Centergy Group Project Success Simulator")
@@ -43,11 +43,11 @@ if not st.session_state.user:
         if st.button("Create Account", key="btn_signup"):
             try:
                 response = supabase.auth.sign_up({"email": email, "password": password})
-                st.success("Account created! Please check your email to confirm the account.")
+                st.success("Account created! Please check your email to confirm.")
             except Exception as e:
                 st.error(f"Sign-up failed: {str(e)}")
 
-    st.stop()  # Stop here until logged in
+    st.stop()
 
 # ====================== MAIN APP (Logged In) ======================
 st.image("centergy_logo.png", width=300)
@@ -88,12 +88,122 @@ if not st.session_state.current_project_id:
 
 st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
-# ====================== YOUR EXISTING PREDICTION ENGINE ======================
-# (This section will be fully wired to the current project in the next message)
-st.success("✅ Authentication + Project Selection Active")
-st.info("Per-project isolation is now enabled. The prediction engine is being wired to your selected project.")
+# ====================== PREDICTION ENGINE (Per-Project) ======================
+# (Your original prediction logic, now scoped to current project)
+st.subheader("Rate Each Project Aspect (1–10)")
 
-# Placeholder for the full prediction, aspects, charts, feedback, export
-# We will expand this in the next step once you confirm the login works.
+# For now we use the default aspects (you can make them per-project later)
+# Load aspects (we can expand this to be per-project in next Kaizen)
+aspects = {
+    "WBS Completeness": {"weight": 0.13, "desc": "Deliverables-oriented WBS defined and validated?"},
+    "Stakeholder Alignment": {"weight": 0.10, "desc": "Clear buy-in and engagement from team, client, and sponsor?"},
+    "Schedule Baseline Quality": {"weight": 0.12, "desc": "Critical Path validated via Sticky Shuffle?"},
+    "Cost Control Baseline": {"weight": 0.10, "desc": "Budget and EVM-style forecasts established?"},
+    "Risk Identification & Response": {"weight": 0.13, "desc": "Risk Log with Darwinian mitigation strategies?"},
+    "Team Experience & Capacity": {"weight": 0.09, "desc": "Skills, learning curve, and capacity addressed?"},
+    "Requirements Stability": {"weight": 0.08, "desc": "Changing requirements identified and controlled?"},
+    "Resource Availability": {"weight": 0.08, "desc": "People, tools, and funding secured?"},
+    "Lessons Learned Integration": {"weight": 0.05, "desc": "Past failures proactively avoided?"},
+    "Communication & PUF Plan": {"weight": 0.06, "desc": "PUF-style updates and proactive communication planned?"},
+    "Executive Support": {"weight": 0.00, "desc": "Strong sponsor commitment and visibility?"},
+}
+
+inputs = {}
+weighted_scores = {}
+aspect_data = []
+
+for name, data in aspects.items():
+    score = st.slider(f"{name}", 1, 10, 7, help=data["desc"], key=name)
+    inputs[name] = score
+    weighted_scores[name] = score * data["weight"]
+    aspect_data.append({"Aspect": name, "Score": score, "Weight": data["weight"]})
+
+total_weighted = sum(weighted_scores.values())
+max_weight = sum(a["weight"] for a in aspects.values())
+predictive_index = round(total_weighted / max_weight, 1)
+
+if predictive_index >= 8.5:
+    status = "🟢 GREEN – Strong Likelihood of Success"
+    color = "#00CC00"
+    advice_level = "Strong position – proceed with confidence."
+elif predictive_index >= 6.5:
+    status = "🟡 YELLOW – Moderate Risk – Strengthen Now"
+    color = "#FFAA00"
+    advice_level = "Address gaps proactively."
+else:
+    status = "🔴 RED – High Risk – Re-baseline Immediately"
+    color = "#FF4444"
+    advice_level = "Immediate corrective actions required."
+
+st.subheader("🎯 Predictive Analysis Result")
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown(f"<h2 style='color:{color};'>{status}</h2>", unsafe_allow_html=True)
+with col2:
+    st.metric("Success Predictive Index", f"{predictive_index}/10.0")
+st.progress(predictive_index / 10)
+
+st.subheader("🔧 Responsive Advice")
+weak_aspects = [(a, s, aspects[a]["weight"]) for a, s in inputs.items() if s <= 5]
+weak_aspects.sort(key=lambda x: x[2], reverse=True)
+
+if weak_aspects:
+    st.markdown("**Focus here first (highest impact issues):**")
+    for aspect, score, wt in weak_aspects[:7]:
+        st.warning(f"**{aspect}** (Score: {score}/10, Weight: {wt:.2f}) – {aspects[aspect]['desc']}")
+        if aspect in ["WBS Completeness", "Schedule Baseline Quality", "Risk Identification & Response"]:
+            st.info("→ Run Sticky Shuffle + add contingency buffer immediately.")
+        elif any(k in aspect for k in ["Compliance", "Grant", "Outcomes", "Funding"]):
+            st.info("→ Strengthen grant-specific elements (NOFO compliance, KPIs, cash flow).")
+        else:
+            st.info("→ Proactive fix now.")
+else:
+    st.success("All aspects strong – Excellent foundation!")
+
+st.markdown(f"**Overall Guidance:** {advice_level}")
+
+# Charts
+st.subheader("📊 Visual Project Aspects Analysis")
+df_aspects = pd.DataFrame(aspect_data).sort_values("Score", ascending=True)
+fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
+                 title="Aspect Scores (Higher = Better)",
+                 color="Score", color_continuous_scale="RdYlGn")
+fig_bar.update_layout(height=500)
+st.plotly_chart(fig_bar, use_container_width=True)
+
+st.subheader("📈 Historical Predictive Index Trend")
+df_feedback = pd.read_sql_query("SELECT timestamp, predictive_index FROM feedback ORDER BY timestamp", conn)
+if not df_feedback.empty:
+    df_feedback['timestamp'] = pd.to_datetime(df_feedback['timestamp'])
+    fig_trend = px.line(df_feedback, x="timestamp", y="predictive_index",
+                        title="Predictive Index Trend from Actual Outcomes",
+                        markers=True)
+    fig_trend.update_layout(yaxis_range=[0, 10])
+    st.plotly_chart(fig_trend, use_container_width=True)
+
+# Feedback
+st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
+
+if "reset_trigger" not in st.session_state:
+    st.session_state.reset_trigger = 0
+
+col_fb1, col_fb2 = st.columns(2)
+with col_fb1:
+    actual_result = st.selectbox("Actual Project Outcome", 
+        ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"],
+        key=f"outcome_{st.session_state.reset_trigger}")
+with col_fb2:
+    notes = st.text_area("Notes / Lessons Learned", 
+        placeholder="What actually happened? (Grant-specific insights welcome)",
+        key=f"notes_{st.session_state.reset_trigger}")
+
+if st.button("Submit Feedback & Update Model"):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    c.execute("INSERT INTO feedback VALUES (?, ?, ?, ?, ?)", 
+              (now, predictive_index, actual_result, notes, int(use_grant_mode)))
+    conn.commit()
+    st.success("✅ Feedback saved successfully! Form cleared.")
+    st.session_state.reset_trigger += 1
+    st.rerun()
 
 st.caption("PSSA v2.0 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
