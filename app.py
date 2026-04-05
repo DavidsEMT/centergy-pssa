@@ -186,7 +186,7 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-# ====================== FEEDBACK SECTION (Per-Project) ======================
+# ====================== FEEDBACK SECTION ======================
 st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
 
 col_fb1, col_fb2 = st.columns(2)
@@ -224,4 +224,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.0 – Clean Restart with Per-Project Segmentation | Centergy Reality-Based Controls")
+st.caption("PSSA v3.0 – Clean Restart with Simplified RLS | Centergy Reality-Based Controls")
