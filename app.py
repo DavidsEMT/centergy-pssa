@@ -168,4 +168,4 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-st.caption("PSSA v2.5 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
+st.caption("PSSA v2.6 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
