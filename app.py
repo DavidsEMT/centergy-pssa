@@ -70,7 +70,7 @@ with st.sidebar:
         if new_name:
             try:
                 new_id = str(uuid.uuid4())
-                supabase.table("projects").insert({
+                result = supabase.table("projects").insert({
                     "id": new_id,
                     "user_id": st.session_state.user.id,
                     "name": new_name,
@@ -230,7 +230,7 @@ if st.button("📄 Export Full Project Report (Markdown)"):
         file_name=f"Centergy_PSSA_Report_{st.session_state.current_project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
         mime="text/markdown"
     )
-    st.success("Report generated! Click the download button above to save the .md file (open in Typora/VS Code and print to PDF).")
+    st.success("Report generated! Click the download button above to save the .md file.")
 
 # ====================== FEEDBACK SECTION ======================
 st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
@@ -272,4 +272,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.4 – RLS Re-enabled for Security | Centergy Reality-Based Controls")
+st.caption("PSSA v3.5 – RLS Re-enabled Securely | Centergy Reality-Based Controls")
