@@ -15,8 +15,6 @@ if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
-if "refresh_projects" not in st.session_state:
-    st.session_state.refresh_projects = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -57,7 +55,6 @@ st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.e
 with st.sidebar:
     st.header("My Projects")
     
-    # Fetch projects with refresh trigger
     projects_response = supabase.table("projects").select("*").eq("user_id", st.session_state.user.id).execute()
     projects = projects_response.data if projects_response.data else []
 
@@ -67,21 +64,22 @@ with st.sidebar:
             st.session_state.current_project_name = proj["name"]
             st.rerun()
 
-    # New Project Form
     st.subheader("New Project")
     new_name = st.text_input("Project Name", key="new_proj_name")
     if st.button("Create Project", key="create_new_proj"):
         if new_name:
-            new_id = str(uuid.uuid4())
-            supabase.table("projects").insert({
-                "id": new_id,
-                "user_id": st.session_state.user.id,
-                "name": new_name,
-                "created_at": datetime.now().isoformat()
-            }).execute()
-            st.success(f"Project '{new_name}' created!")
-            st.session_state.refresh_projects += 1
-            st.rerun()
+            try:
+                new_id = str(uuid.uuid4())
+                supabase.table("projects").insert({
+                    "id": new_id,
+                    "user_id": st.session_state.user.id,
+                    "name": new_name,
+                    "created_at": datetime.now().isoformat()
+                }).execute()
+                st.success(f"Project '{new_name}' created successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to create project: {str(e)}")
 
 # If no project selected
 if not st.session_state.current_project_id:
@@ -170,4 +168,4 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-st.caption("PSSA v2.1 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
+st.caption("PSSA v2.2 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
