@@ -194,7 +194,8 @@ with col_fb1:
     actual_result = st.selectbox("Actual Project Outcome", 
         ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"])
 with col_fb2:
-    notes = st.text_area("Notes / Lessons Learned", placeholder="What actually happened? (Grant-specific insights welcome)")
+    notes = st.text_area("Notes / Lessons Learned", 
+        placeholder="What actually happened? (Grant-specific insights welcome)")
 
 if st.button("Submit Feedback & Update Model"):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -223,4 +224,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.20 – Final Stable Version | Centergy Reality-Based Controls")
+st.caption("PSSA v2.20 – Final Stable Version with Per-Project Feedback | Centergy Reality-Based Controls")
