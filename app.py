@@ -9,13 +9,14 @@ st.set_page_config(page_title="Centergy Group Project Success Simulator", layout
 
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# Persistent session state
 if "user" not in st.session_state:
     st.session_state.user = None
 if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
+if "reset_trigger" not in st.session_state:
+    st.session_state.reset_trigger = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -179,9 +180,6 @@ st.plotly_chart(fig_bar, use_container_width=True)
 # ====================== FEEDBACK SECTION (Per-Project) ======================
 st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
 
-if "reset_trigger" not in st.session_state:
-    st.session_state.reset_trigger = 0
-
 col_fb1, col_fb2 = st.columns(2)
 with col_fb1:
     actual_result = st.selectbox("Actual Project Outcome", 
@@ -220,4 +218,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.17 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
+st.caption("PSSA v2.18 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
