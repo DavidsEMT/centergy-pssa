@@ -9,6 +9,7 @@ st.set_page_config(page_title="Centergy Group Project Success Simulator", layout
 
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
+# Persistent session state
 if "user" not in st.session_state:
     st.session_state.user = None
 if "current_project_id" not in st.session_state:
@@ -70,7 +71,7 @@ with st.sidebar:
         if new_name:
             try:
                 new_id = str(uuid.uuid4())
-                result = supabase.table("projects").insert({
+                supabase.table("projects").insert({
                     "id": new_id,
                     "user_id": st.session_state.user.id,
                     "name": new_name,
@@ -219,4 +220,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.16 – Authentication + Per-Project Segmentation + Feedback | Centergy Reality-Based Controls")
+st.caption("PSSA v2.17 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
