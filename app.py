@@ -51,17 +51,15 @@ if not st.session_state.user:
 st.image("centergy_logo.png", width=250)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Top Navigation Tabs
+# Navigation Tabs
 tab_main, tab_admin = st.tabs(["📊 Main Simulator", "📈 Admin Dashboard"])
 
 # ====================== ADMIN DASHBOARD ======================
 with tab_admin:
     st.subheader("📈 Admin Overview Dashboard")
     
-    users_response = supabase.table("auth.users").select("id").execute()
-    total_users = len(users_response.data) if users_response.data else 0
-    
-    all_projects = supabase.table("projects").select("*, user_id").execute().data
+    # Safe queries only on public tables
+    all_projects = supabase.table("projects").select("id, name, user_id, created_at").execute().data
     total_projects = len(all_projects) if all_projects else 0
     
     all_feedback = supabase.table("feedback").select("*").execute().data
@@ -69,15 +67,16 @@ with tab_admin:
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Users", total_users)
-    with col2:
         st.metric("Total Projects", total_projects)
-    with col3:
+    with col2:
         avg_index = round(df_feedback["predictive_index"].mean(), 1) if not df_feedback.empty else 0
         st.metric("Avg Predictive Index", f"{avg_index}/10")
-    with col4:
+    with col3:
         green_count = len(df_feedback[df_feedback.get("actual_outcome", "").str.contains("Green", na=False)]) if not df_feedback.empty else 0
         st.metric("Green Outcomes", green_count)
+    with col4:
+        red_count = len(df_feedback[df_feedback.get("actual_outcome", "").str.contains("Red", na=False)]) if not df_feedback.empty else 0
+        st.metric("Red Outcomes", red_count)
     
     if not df_feedback.empty:
         st.subheader("Success Distribution")
@@ -85,15 +84,17 @@ with tab_admin:
         fig_pie = px.pie(names=outcome_counts.index, values=outcome_counts.values, title="Actual Outcomes Across All Projects")
         st.plotly_chart(fig_pie, use_container_width=True)
     
-    st.subheader("Recent Activity")
+    st.subheader("Recent Projects")
     if all_projects:
         df_projects = pd.DataFrame(all_projects)
         st.dataframe(df_projects[["name", "created_at"]].sort_values("created_at", ascending=False).head(10))
     
     if not df_feedback.empty:
+        st.subheader("Recent Feedback")
         st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome"]].sort_values("timestamp", ascending=False).head(15))
     
     st.caption("Admin Dashboard – Visible only to Centergy administrator")
+    st.stop()
 
 # ====================== MAIN SIMULATOR ======================
 with tab_main:
@@ -279,7 +280,7 @@ with tab_main:
             file_name=f"Centergy_PSSA_Report_{st.session_state.current_project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
             mime="text/markdown"
         )
-        st.success("Report generated! Click the download button above.")
+        st.success("Report generated!")
 
     # Feedback Form
     st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
@@ -312,13 +313,15 @@ with tab_main:
 
     # View Feedback
     st.subheader("📋 View Feedback for This Project")
-    feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
-    feedback_data = feedback_response.data if feedback_response.data else []
-
-    if feedback_data:
-        df_feedback = pd.DataFrame(feedback_data)
-        st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
+    if st.session_state.current_project_id:
+        feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
+        feedback_data = feedback_response.data if feedback_response.data else []
+        if feedback_data:
+            df_feedback = pd.DataFrame(feedback_data)
+            st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
+        else:
+            st.info("No feedback recorded for this project yet.")
     else:
-        st.info("No feedback recorded for this project yet.")
+        st.info("No project selected.")
 
-    st.caption("PSSA v3.9 – Admin Dashboard + Stable Sidebar | Centergy Reality-Based Controls")
+    st.caption("PSSA v4.0 – Stable Main Simulator + Admin Dashboard | Centergy Reality-Based Controls")
