@@ -201,4 +201,15 @@ if st.button("Submit Feedback & Update Model"):
     except Exception as e:
         st.error(f"Failed to save feedback: {str(e)}")
 
-st.caption("PSSA v2.12 – Authentication + Per-Project Segmentation + Feedback | Centergy Reality-Based Controls")
+# ====================== VIEW FEEDBACK (Per-Project) ======================
+st.subheader("📋 View Feedback for This Project")
+feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
+feedback_data = feedback_response.data if feedback_response.data else []
+
+if feedback_data:
+    df_feedback = pd.DataFrame(feedback_data)
+    st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
+else:
+    st.info("No feedback recorded for this project yet.")
+
+st.caption("PSSA v2.13 – Authentication + Per-Project Segmentation + Submit & View Feedback | Centergy Reality-Based Controls")
