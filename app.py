@@ -70,7 +70,7 @@ with st.sidebar:
         if new_name:
             try:
                 new_id = str(uuid.uuid4())
-                supabase.table("projects").insert({
+                result = supabase.table("projects").insert({
                     "id": new_id,
                     "user_id": st.session_state.user.id,
                     "name": new_name,
@@ -168,4 +168,4 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-st.caption("PSSA v2.2 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
+st.caption("PSSA v2.5 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
