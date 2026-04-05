@@ -5,7 +5,7 @@ from datetime import datetime
 import plotly.express as px
 import uuid
 
-st.set_page_config(page_title="Centergy Group Project Success Simulator", layout="centered", page_icon="🟢")
+st.set_page_config(page_title="Centergy Group Project Success Simulator", layout="wide", page_icon="🟢")
 
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
@@ -15,6 +15,8 @@ if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
+if "view" not in st.session_state:
+    st.session_state.view = "Main Simulator"
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -48,61 +50,75 @@ if not st.session_state.user:
     st.stop()
 
 # ====================== MAIN APP ======================
-st.image("centergy_logo.png", width=300)
+st.image("centergy_logo.png", width=250)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Sidebar with Refresh
-with st.sidebar:
-    st.header("My Projects")
-    
-    col_refresh, col_new = st.columns([1, 2])
-    with col_refresh:
-        if st.button("🔄 Refresh", key="refresh_projects"):
-            st.rerun()
-    
-    projects_response = supabase.table("projects").select("*").eq("user_id", st.session_state.user.id).execute()
-    projects = projects_response.data if projects_response.data else []
-
-    for proj in projects:
-        if st.button(proj["name"], key=f"proj_{proj['id']}"):
-            st.session_state.current_project_id = proj["id"]
-            st.session_state.current_project_name = proj["name"]
-            st.rerun()
-
-    st.subheader("New Project")
-    new_name = st.text_input("Project Name", key="new_proj_name")
-    if st.button("Create Project", key="create_new_proj"):
-        if new_name:
-            try:
-                new_id = str(uuid.uuid4())
-                supabase.table("projects").insert({
-                    "id": new_id,
-                    "user_id": st.session_state.user.id,
-                    "name": new_name,
-                    "created_at": datetime.now().isoformat()
-                }).execute()
-                st.success(f"Project '{new_name}' created successfully!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to create project: {str(e)}")
-
-    st.divider()
+# Top Navigation
+col_nav1, col_nav2, col_nav3 = st.columns([3, 2, 1])
+with col_nav1:
+    if st.button("📊 Main Simulator", key="nav_main"):
+        st.session_state.view = "Main Simulator"
+        st.rerun()
+with col_nav2:
+    if st.button("📈 Admin Dashboard", key="nav_admin"):
+        st.session_state.view = "Admin Dashboard"
+        st.rerun()
+with col_nav3:
     if st.button("🚪 Logout"):
         st.session_state.user = None
         st.session_state.current_project_id = None
         st.session_state.current_project_name = None
         st.rerun()
 
-if not st.session_state.current_project_id:
-    st.info("Please create or select a project from the sidebar to begin analysis.")
+# ====================== ADMIN DASHBOARD ======================
+if st.session_state.view == "Admin Dashboard":
+    st.subheader("📈 Admin Overview Dashboard")
+    
+    # Totals
+    users_response = supabase.table("auth.users").select("id").execute()
+    total_users = len(users_response.data) if users_response.data else 0
+    
+    all_projects = supabase.table("projects").select("*, user_id").execute().data
+    total_projects = len(all_projects) if all_projects else 0
+    
+    all_feedback = supabase.table("feedback").select("*").execute().data
+    df_feedback = pd.DataFrame(all_feedback) if all_feedback else pd.DataFrame()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Users", total_users)
+    with col2:
+        st.metric("Total Projects", total_projects)
+    with col3:
+        avg_index = round(df_feedback["predictive_index"].mean(), 1) if not df_feedback.empty else 0
+        st.metric("Avg Predictive Index", f"{avg_index}/10")
+    with col4:
+        green_count = len(df_feedback[df_feedback.get("actual_outcome", "").str.contains("Green", na=False)]) if not df_feedback.empty else 0
+        st.metric("Green Outcomes", green_count)
+    
+    if not df_feedback.empty:
+        st.subheader("Success Distribution")
+        outcome_counts = df_feedback["actual_outcome"].value_counts()
+        fig_pie = px.pie(names=outcome_counts.index, values=outcome_counts.values, title="Actual Outcomes Across All Projects")
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    st.subheader("Recent Activity")
+    if all_projects:
+        df_projects = pd.DataFrame(all_projects)
+        st.dataframe(df_projects[["name", "created_at"]].sort_values("created_at", ascending=False).head(10))
+    
+    if not df_feedback.empty:
+        st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome"]].sort_values("timestamp", ascending=False).head(15))
+    
+    st.caption("Admin Dashboard – Visible only to Centergy administrator")
     st.stop()
 
+# ====================== MAIN SIMULATOR ======================
 st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
-# Grant Mode
 use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
-# ====================== PREDICTION ENGINE ======================
+# Prediction Engine
 st.subheader("Rate Each Project Aspect (1–10)")
 
 aspects = {
@@ -235,7 +251,7 @@ if st.button("📄 Export Full Project Report (Markdown)"):
         file_name=f"Centergy_PSSA_Report_{st.session_state.current_project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
         mime="text/markdown"
     )
-    st.success("Report generated! Click the download button above to save the .md file.")
+    st.success("Report generated! Click the download button above to save the .md file (open in Typora/VS Code and print to PDF).")
 
 # ====================== FEEDBACK SECTION ======================
 st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
@@ -277,4 +293,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.7 – Refresh Projects Button + Polish | Centergy Reality-Based Controls")
+st.caption("PSSA v3.8 – Admin Dashboard + Full Export | Centergy Reality-Based Controls")
