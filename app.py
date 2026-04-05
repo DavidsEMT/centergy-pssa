@@ -51,7 +51,7 @@ if not st.session_state.user:
 st.image("centergy_logo.png", width=300)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Sidebar - Projects
+# Sidebar - Projects + Logout
 with st.sidebar:
     st.header("My Projects")
     
@@ -80,6 +80,13 @@ with st.sidebar:
                 st.rerun()
             except Exception as e:
                 st.error(f"Failed to create project: {str(e)}")
+
+    st.divider()
+    if st.button("🚪 Logout"):
+        st.session_state.user = None
+        st.session_state.current_project_id = None
+        st.session_state.current_project_name = None
+        st.rerun()
 
 # If no project selected
 if not st.session_state.current_project_id:
@@ -201,7 +208,7 @@ if st.button("Submit Feedback & Update Model"):
     except Exception as e:
         st.error(f"Failed to save feedback: {str(e)}")
 
-# ====================== VIEW FEEDBACK (Per-Project) ======================
+# View Feedback
 st.subheader("📋 View Feedback for This Project")
 feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
 feedback_data = feedback_response.data if feedback_response.data else []
@@ -212,4 +219,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.13 – Authentication + Per-Project Segmentation + Submit & View Feedback | Centergy Reality-Based Controls")
+st.caption("PSSA v2.14 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
