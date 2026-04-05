@@ -219,4 +219,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.15 – Authentication + Per-Project Segmentation + Feedback | Centergy Reality-Based Controls")
+st.caption("PSSA v2.16 – Authentication + Per-Project Segmentation + Feedback | Centergy Reality-Based Controls")
