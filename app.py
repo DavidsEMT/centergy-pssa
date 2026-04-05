@@ -51,52 +51,72 @@ if not st.session_state.user:
 st.image("centergy_logo.png", width=250)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Navigation Tabs
 tab_main, tab_admin = st.tabs(["📊 Main Simulator", "📈 Admin Dashboard"])
 
-# ====================== ADMIN DASHBOARD ======================
+# ====================== ADMIN DASHBOARD (Enhanced) ======================
 with tab_admin:
-    st.subheader("📈 Admin Overview Dashboard")
+    st.subheader("📈 Centergy Admin Overview Dashboard")
     
+    # Fetch data
     all_projects = supabase.table("projects").select("id, name, user_id, created_at").execute().data
     total_projects = len(all_projects) if all_projects else 0
-    
+
     all_feedback = supabase.table("feedback").select("*").execute().data
     df_feedback = pd.DataFrame(all_feedback) if all_feedback else pd.DataFrame()
-    
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Projects", total_projects)
     with col2:
         avg_index = round(df_feedback["predictive_index"].mean(), 1) if not df_feedback.empty else 0
-        st.metric("Avg Predictive Index", f"{avg_index}/10")
+        st.metric("Organization Avg Index", f"{avg_index}/10")
     with col3:
         green_count = len(df_feedback[df_feedback.get("actual_outcome", "").str.contains("Green", na=False)]) if not df_feedback.empty else 0
         st.metric("Green Outcomes", green_count)
     with col4:
         red_count = len(df_feedback[df_feedback.get("actual_outcome", "").str.contains("Red", na=False)]) if not df_feedback.empty else 0
         st.metric("Red Outcomes", red_count)
-    
+
+    # Trend over time
+    if not df_feedback.empty:
+        df_feedback["timestamp"] = pd.to_datetime(df_feedback["timestamp"], errors='coerce')
+        df_feedback = df_feedback.dropna(subset=["timestamp"])
+        df_feedback = df_feedback.sort_values("timestamp")
+        
+        st.subheader("📈 Predictive Index Trend Over Time")
+        fig_trend = px.line(df_feedback, x="timestamp", y="predictive_index", 
+                           title="Average Predictive Index Trend", markers=True)
+        st.plotly_chart(fig_trend, use_container_width=True)
+
+    # Success Distribution
     if not df_feedback.empty:
         st.subheader("Success Distribution")
         outcome_counts = df_feedback["actual_outcome"].value_counts()
-        fig_pie = px.pie(names=outcome_counts.index, values=outcome_counts.values, title="Actual Outcomes Across All Projects")
+        fig_pie = px.pie(names=outcome_counts.index, values=outcome_counts.values, 
+                        title="Actual Outcomes Across All Projects")
         st.plotly_chart(fig_pie, use_container_width=True)
-    
+
+    # Grant Mode Comparison
+    if not df_feedback.empty and "grant_mode" in df_feedback.columns:
+        st.subheader("Grant Mode vs Normal Projects")
+        grant_stats = df_feedback.groupby("grant_mode")["predictive_index"].mean().round(1)
+        st.bar_chart(grant_stats, x_label="Grant Mode (False=Normal, True=Grant)", y_label="Avg Predictive Index")
+
+    # Recent Activity
     st.subheader("Recent Projects")
     if all_projects:
         df_projects = pd.DataFrame(all_projects)
         st.dataframe(df_projects[["name", "created_at"]].sort_values("created_at", ascending=False).head(10))
-    
+
     if not df_feedback.empty:
         st.subheader("Recent Feedback")
         st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome"]].sort_values("timestamp", ascending=False).head(15))
-    
-    st.caption("Admin Dashboard – Visible only to Centergy administrator")
+
+    st.caption("Enhanced Admin Dashboard – Visible only to Centergy administrator")
 
 # ====================== MAIN SIMULATOR ======================
 with tab_main:
-    # Sidebar - Projects (always visible on Main tab)
+    # Sidebar
     with st.sidebar:
         st.header("My Projects")
         
@@ -136,7 +156,6 @@ with tab_main:
             st.session_state.current_project_name = None
             st.rerun()
 
-    # Main Simulator Content - only show if a project is selected
     if not st.session_state.current_project_id:
         st.info("👈 Please create or select a project from the sidebar to begin analysis.")
         st.stop()
@@ -321,4 +340,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v4.1 – Fixed Main Simulator + Admin Dashboard | Centergy Reality-Based Controls")
+    st.caption("PSSA v4.2 – Enhanced Admin Dashboard | Centergy Reality-Based Controls")
