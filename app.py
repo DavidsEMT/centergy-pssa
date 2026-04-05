@@ -185,7 +185,7 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-# ====================== EXPORT REPORT BUTTON (No tabulate dependency) ======================
+# ====================== EXPORT REPORT BUTTON ======================
 if st.button("📄 Export Full Project Report (Markdown)"):
     report_md = f"# Centergy Group Project Success Simulator Report\n\n"
     report_md += f"**Project:** {st.session_state.current_project_name}\n"
@@ -272,4 +272,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.3 – Export Report Fixed (No tabulate) | Centergy Reality-Based Controls")
+st.caption("PSSA v3.4 – RLS Re-enabled for Security | Centergy Reality-Based Controls")
