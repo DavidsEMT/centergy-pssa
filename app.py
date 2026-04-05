@@ -15,8 +15,6 @@ if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
-if "reset_trigger" not in st.session_state:
-    st.session_state.reset_trigger = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -190,7 +188,7 @@ with col_fb2:
         placeholder="What actually happened? (Grant-specific insights welcome)",
         key=f"notes_{st.session_state.reset_trigger}")
 
-if st.button("Submit Feedback & Update Model"):
+if st.button("Submit Feedback & Update Model", key="submit_feedback_btn"):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     try:
         supabase.table("feedback").insert({
