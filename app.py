@@ -51,9 +51,6 @@ if not st.session_state.user:
 st.image("centergy_logo.png", width=300)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Debug info (remove later)
-st.caption(f"Debug: User ID = {st.session_state.user.id}")
-
 # Sidebar - Projects
 with st.sidebar:
     st.header("My Projects")
@@ -171,4 +168,37 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-st.caption("PSSA v2.9 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
+# ====================== FEEDBACK SECTION (Per-Project) ======================
+st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
+
+if "reset_trigger" not in st.session_state:
+    st.session_state.reset_trigger = 0
+
+col_fb1, col_fb2 = st.columns(2)
+with col_fb1:
+    actual_result = st.selectbox("Actual Project Outcome", 
+        ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"],
+        key=f"outcome_{st.session_state.reset_trigger}")
+with col_fb2:
+    notes = st.text_area("Notes / Lessons Learned", 
+        placeholder="What actually happened? (Grant-specific insights welcome)",
+        key=f"notes_{st.session_state.reset_trigger}")
+
+if st.button("Submit Feedback & Update Model"):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        supabase.table("feedback").insert({
+            "project_id": st.session_state.current_project_id,
+            "timestamp": now,
+            "predictive_index": predictive_index,
+            "actual_outcome": actual_result,
+            "notes": notes,
+            "grant_mode": False
+        }).execute()
+        st.success("✅ Feedback saved successfully for this project!")
+        st.session_state.reset_trigger += 1
+        st.rerun()
+    except Exception as e:
+        st.error(f"Failed to save feedback: {str(e)}")
+
+st.caption("PSSA v2.12 – Authentication + Per-Project Segmentation + Feedback | Centergy Reality-Based Controls")
