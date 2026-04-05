@@ -185,7 +185,7 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-# ====================== EXPORT REPORT BUTTON ======================
+# ====================== EXPORT REPORT BUTTON (No tabulate dependency) ======================
 if st.button("📄 Export Full Project Report (Markdown)"):
     report_md = f"# Centergy Group Project Success Simulator Report\n\n"
     report_md += f"**Project:** {st.session_state.current_project_name}\n"
@@ -216,8 +216,11 @@ if st.button("📄 Export Full Project Report (Markdown)"):
     feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
     feedback_data = feedback_response.data if feedback_response.data else []
     if feedback_data:
-        df_feedback = pd.DataFrame(feedback_data)
-        report_md += df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]].to_markdown(index=False)
+        report_md += "| Timestamp | Predictive Index | Actual Outcome | Notes |\n"
+        report_md += "|-----------|------------------|----------------|-------|\n"
+        for fb in feedback_data:
+            notes_clean = (fb.get("notes") or "").replace("|", "\\|").replace("\n", " ")
+            report_md += f"| {fb.get('timestamp','')} | {fb.get('predictive_index','')} | {fb.get('actual_outcome','')} | {notes_clean} |\n"
     else:
         report_md += "No feedback recorded yet.\n"
     
@@ -227,7 +230,7 @@ if st.button("📄 Export Full Project Report (Markdown)"):
         file_name=f"Centergy_PSSA_Report_{st.session_state.current_project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
         mime="text/markdown"
     )
-    st.success("Report generated! Click the download button above to save it.")
+    st.success("Report generated! Click the download button above to save the .md file (open in Typora/VS Code and print to PDF).")
 
 # ====================== FEEDBACK SECTION ======================
 st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
@@ -269,4 +272,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.2 – Export Report Added | Centergy Reality-Based Controls")
+st.caption("PSSA v3.3 – Export Report Fixed (No tabulate) | Centergy Reality-Based Controls")
