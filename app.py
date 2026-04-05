@@ -70,7 +70,7 @@ with st.sidebar:
         if new_name:
             try:
                 new_id = str(uuid.uuid4())
-                result = supabase.table("projects").insert({
+                supabase.table("projects").insert({
                     "id": new_id,
                     "user_id": st.session_state.user.id,
                     "name": new_name,
@@ -272,4 +272,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.5 – RLS Re-enabled Securely | Centergy Reality-Based Controls")
+st.caption("PSSA v3.6 – RLS Disabled for Stability | Centergy Reality-Based Controls")
