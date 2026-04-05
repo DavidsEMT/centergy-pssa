@@ -51,6 +51,9 @@ if not st.session_state.user:
 st.image("centergy_logo.png", width=300)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
+# Debug info (remove later)
+st.caption(f"Debug: User ID = {st.session_state.user.id}")
+
 # Sidebar - Projects
 with st.sidebar:
     st.header("My Projects")
@@ -168,4 +171,4 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-st.caption("PSSA v2.7 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
+st.caption("PSSA v2.9 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
