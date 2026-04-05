@@ -15,6 +15,8 @@ if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
+if "reset_trigger" not in st.session_state:
+    st.session_state.reset_trigger = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -95,6 +97,10 @@ if not st.session_state.current_project_id:
 
 st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
+# Grant Mode (now visible)
+use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False,
+                             help="Shows grant-specific aspects and adjusts emphasis")
+
 # ====================== PREDICTION ENGINE ======================
 st.subheader("Rate Each Project Aspect (1–10)")
 
@@ -111,6 +117,14 @@ aspects = {
     "Communication & PUF Plan": {"weight": 0.06, "desc": "PUF-style updates and proactive communication planned?"},
     "Executive Support": {"weight": 0.00, "desc": "Strong sponsor commitment and visibility?"},
 }
+
+if use_grant_mode:
+    aspects.update({
+        "Grant Compliance & Reporting Readiness": {"weight": 0.10, "desc": "NOFO/RFA guidelines, reporting, and audit readiness fully addressed?"},
+        "Measurable Outcomes & Evaluation Plan": {"weight": 0.09, "desc": "Clear baseline data, KPIs, and success indicators defined?"},
+        "Funding Certainty & Matching Requirements": {"weight": 0.08, "desc": "Budget realistic with secured matching funds and cash flow?"},
+        "Proposal Alignment with Funder Priorities": {"weight": 0.08, "desc": "Project clearly ties to funder goals and priorities?"},
+    })
 
 inputs = {}
 weighted_scores = {}
@@ -197,7 +211,7 @@ if st.button("Submit Feedback & Update Model", key="submit_feedback_btn"):
             "predictive_index": predictive_index,
             "actual_outcome": actual_result,
             "notes": notes,
-            "grant_mode": False
+            "grant_mode": use_grant_mode
         }).execute()
         st.success("✅ Feedback saved successfully for this project!")
         st.session_state.reset_trigger += 1
@@ -216,4 +230,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.18 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
+st.caption("PSSA v2.19 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
