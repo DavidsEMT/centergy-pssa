@@ -7,10 +7,8 @@ import uuid
 
 st.set_page_config(page_title="Centergy Group Project Success Simulator", layout="centered", page_icon="🟢")
 
-# Supabase Client
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# Session State
 if "user" not in st.session_state:
     st.session_state.user = None
 if "current_project_id" not in st.session_state:
@@ -18,7 +16,7 @@ if "current_project_id" not in st.session_state:
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
 
-# ====================== LOGIN SCREEN ======================
+# Login Screen
 if not st.session_state.user:
     st.image("centergy_logo.png", width=400)
     st.title("Centergy Group Project Success Simulator")
@@ -49,15 +47,14 @@ if not st.session_state.user:
 
     st.stop()
 
-# ====================== MAIN APP (Logged In) ======================
+# Logged-in Main App
 st.image("centergy_logo.png", width=300)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Sidebar - Project Management
+# Sidebar - Projects
 with st.sidebar:
     st.header("My Projects")
     
-    # Fetch user's projects
     projects_response = supabase.table("projects").select("*").eq("user_id", st.session_state.user.id).execute()
     projects = projects_response.data if projects_response.data else []
 
@@ -81,19 +78,15 @@ with st.sidebar:
                 st.success(f"Project '{new_name}' created!")
                 st.rerun()
 
-# If no project selected
 if not st.session_state.current_project_id:
-    st.info("Please create or select a project from the sidebar to begin analysis.")
+    st.info("Please create or select a project from the sidebar to begin.")
     st.stop()
 
 st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
-# ====================== PREDICTION ENGINE (Per-Project) ======================
-# (Your original prediction logic, now scoped to current project)
+# Prediction Engine (scoped to current project)
 st.subheader("Rate Each Project Aspect (1–10)")
 
-# For now we use the default aspects (you can make them per-project later)
-# Load aspects (we can expand this to be per-project in next Kaizen)
 aspects = {
     "WBS Completeness": {"weight": 0.13, "desc": "Deliverables-oriented WBS defined and validated?"},
     "Stakeholder Alignment": {"weight": 0.10, "desc": "Clear buy-in and engagement from team, client, and sponsor?"},
@@ -154,7 +147,7 @@ if weak_aspects:
         if aspect in ["WBS Completeness", "Schedule Baseline Quality", "Risk Identification & Response"]:
             st.info("→ Run Sticky Shuffle + add contingency buffer immediately.")
         elif any(k in aspect for k in ["Compliance", "Grant", "Outcomes", "Funding"]):
-            st.info("→ Strengthen grant-specific elements (NOFO compliance, KPIs, cash flow).")
+            st.info("→ Strengthen grant-specific elements.")
         else:
             st.info("→ Proactive fix now.")
 else:
@@ -162,7 +155,7 @@ else:
 
 st.markdown(f"**Overall Guidance:** {advice_level}")
 
-# Charts
+# Charts (same as before)
 st.subheader("📊 Visual Project Aspects Analysis")
 df_aspects = pd.DataFrame(aspect_data).sort_values("Score", ascending=True)
 fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
@@ -170,40 +163,5 @@ fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
                  color="Score", color_continuous_scale="RdYlGn")
 fig_bar.update_layout(height=500)
 st.plotly_chart(fig_bar, use_container_width=True)
-
-st.subheader("📈 Historical Predictive Index Trend")
-df_feedback = pd.read_sql_query("SELECT timestamp, predictive_index FROM feedback ORDER BY timestamp", conn)
-if not df_feedback.empty:
-    df_feedback['timestamp'] = pd.to_datetime(df_feedback['timestamp'])
-    fig_trend = px.line(df_feedback, x="timestamp", y="predictive_index",
-                        title="Predictive Index Trend from Actual Outcomes",
-                        markers=True)
-    fig_trend.update_layout(yaxis_range=[0, 10])
-    st.plotly_chart(fig_trend, use_container_width=True)
-
-# Feedback
-st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
-
-if "reset_trigger" not in st.session_state:
-    st.session_state.reset_trigger = 0
-
-col_fb1, col_fb2 = st.columns(2)
-with col_fb1:
-    actual_result = st.selectbox("Actual Project Outcome", 
-        ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"],
-        key=f"outcome_{st.session_state.reset_trigger}")
-with col_fb2:
-    notes = st.text_area("Notes / Lessons Learned", 
-        placeholder="What actually happened? (Grant-specific insights welcome)",
-        key=f"notes_{st.session_state.reset_trigger}")
-
-if st.button("Submit Feedback & Update Model"):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    c.execute("INSERT INTO feedback VALUES (?, ?, ?, ?, ?)", 
-              (now, predictive_index, actual_result, notes, int(use_grant_mode)))
-    conn.commit()
-    st.success("✅ Feedback saved successfully! Form cleared.")
-    st.session_state.reset_trigger += 1
-    st.rerun()
 
 st.caption("PSSA v2.0 – Authentication + Per-Project Segmentation | Centergy Reality-Based Controls")
