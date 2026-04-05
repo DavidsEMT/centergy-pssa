@@ -51,9 +51,14 @@ if not st.session_state.user:
 st.image("centergy_logo.png", width=300)
 st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.email}")
 
-# Sidebar
+# Sidebar with Refresh
 with st.sidebar:
     st.header("My Projects")
+    
+    col_refresh, col_new = st.columns([1, 2])
+    with col_refresh:
+        if st.button("🔄 Refresh", key="refresh_projects"):
+            st.rerun()
     
     projects_response = supabase.table("projects").select("*").eq("user_id", st.session_state.user.id).execute()
     projects = projects_response.data if projects_response.data else []
@@ -272,4 +277,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v3.6 – RLS Disabled for Stability | Centergy Reality-Based Controls")
+st.caption("PSSA v3.7 – Refresh Projects Button + Polish | Centergy Reality-Based Controls")
