@@ -58,7 +58,6 @@ tab_main, tab_admin = st.tabs(["📊 Main Simulator", "📈 Admin Dashboard"])
 with tab_admin:
     st.subheader("📈 Admin Overview Dashboard")
     
-    # Safe queries only on public tables
     all_projects = supabase.table("projects").select("id, name, user_id, created_at").execute().data
     total_projects = len(all_projects) if all_projects else 0
     
@@ -94,11 +93,10 @@ with tab_admin:
         st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome"]].sort_values("timestamp", ascending=False).head(15))
     
     st.caption("Admin Dashboard – Visible only to Centergy administrator")
-    st.stop()
 
 # ====================== MAIN SIMULATOR ======================
 with tab_main:
-    # Sidebar - Projects
+    # Sidebar - Projects (always visible on Main tab)
     with st.sidebar:
         st.header("My Projects")
         
@@ -138,8 +136,9 @@ with tab_main:
             st.session_state.current_project_name = None
             st.rerun()
 
+    # Main Simulator Content - only show if a project is selected
     if not st.session_state.current_project_id:
-        st.info("Please create or select a project from the sidebar to begin analysis.")
+        st.info("👈 Please create or select a project from the sidebar to begin analysis.")
         st.stop()
 
     st.subheader(f"Current Project: {st.session_state.current_project_name}")
@@ -313,15 +312,13 @@ with tab_main:
 
     # View Feedback
     st.subheader("📋 View Feedback for This Project")
-    if st.session_state.current_project_id:
-        feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
-        feedback_data = feedback_response.data if feedback_response.data else []
-        if feedback_data:
-            df_feedback = pd.DataFrame(feedback_data)
-            st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
-        else:
-            st.info("No feedback recorded for this project yet.")
-    else:
-        st.info("No project selected.")
+    feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
+    feedback_data = feedback_response.data if feedback_response.data else []
 
-    st.caption("PSSA v4.0 – Stable Main Simulator + Admin Dashboard | Centergy Reality-Based Controls")
+    if feedback_data:
+        df_feedback = pd.DataFrame(feedback_data)
+        st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
+    else:
+        st.info("No feedback recorded for this project yet.")
+
+    st.caption("PSSA v4.1 – Fixed Main Simulator + Admin Dashboard | Centergy Reality-Based Controls")
