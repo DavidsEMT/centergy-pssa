@@ -15,8 +15,6 @@ if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
-if "reset_trigger" not in st.session_state:
-    st.session_state.reset_trigger = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -97,9 +95,8 @@ if not st.session_state.current_project_id:
 
 st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
-# Grant Mode (now visible)
-use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False,
-                             help="Shows grant-specific aspects and adjusts emphasis")
+# Grant Mode
+use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
 # ====================== PREDICTION ENGINE ======================
 st.subheader("Rate Each Project Aspect (1–10)")
@@ -195,14 +192,11 @@ st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
 col_fb1, col_fb2 = st.columns(2)
 with col_fb1:
     actual_result = st.selectbox("Actual Project Outcome", 
-        ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"],
-        key=f"outcome_{st.session_state.reset_trigger}")
+        ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"])
 with col_fb2:
-    notes = st.text_area("Notes / Lessons Learned", 
-        placeholder="What actually happened? (Grant-specific insights welcome)",
-        key=f"notes_{st.session_state.reset_trigger}")
+    notes = st.text_area("Notes / Lessons Learned", placeholder="What actually happened? (Grant-specific insights welcome)")
 
-if st.button("Submit Feedback & Update Model", key="submit_feedback_btn"):
+if st.button("Submit Feedback & Update Model"):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     try:
         supabase.table("feedback").insert({
@@ -214,7 +208,6 @@ if st.button("Submit Feedback & Update Model", key="submit_feedback_btn"):
             "grant_mode": use_grant_mode
         }).execute()
         st.success("✅ Feedback saved successfully for this project!")
-        st.session_state.reset_trigger += 1
         st.rerun()
     except Exception as e:
         st.error(f"Failed to save feedback: {str(e)}")
@@ -230,4 +223,4 @@ if feedback_data:
 else:
     st.info("No feedback recorded for this project yet.")
 
-st.caption("PSSA v2.19 – Authentication + Per-Project Segmentation + Feedback + Logout | Centergy Reality-Based Controls")
+st.caption("PSSA v2.20 – Final Stable Version | Centergy Reality-Based Controls")
