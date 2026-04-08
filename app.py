@@ -171,7 +171,7 @@ with tab_main:
 
     use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
-    # Stable form for sliders - this is the key fix for kick-outs
+    # Stable form for sliders - prevents kick-outs
     st.subheader("Rate Each Project Aspect (1–10)")
 
     aspects = {
@@ -198,4 +198,66 @@ with tab_main:
 
     score_key = f"scores_{st.session_state.current_project_id}"
     if score_key not in st.session_state:
-        st.session_state[score_key] = {name: 7 for name in
+        st.session_state[score_key] = {name: 7 for name in aspects}
+
+    with st.form("aspect_form"):
+        inputs = {}
+        aspect_data = []
+        for name, data in aspects.items():
+            default_score = st.session_state[score_key].get(name, 7)
+            score = st.slider(f"{name}", 1, 10, default_score, help=data["desc"], key=f"slider_{name}")
+            inputs[name] = score
+            aspect_data.append({"Aspect": name, "Score": score, "Weight": data["weight"]})
+
+        submitted = st.form_submit_button("🔄 Update Scores & Recalculate")
+        if submitted:
+            for name in aspects:
+                st.session_state[score_key][name] = inputs[name]
+            st.success("✅ Scores updated and saved for this project!")
+            st.rerun()
+
+    # Calculate predictive index from the form inputs
+    weighted_scores = {name: inputs[name] * data["weight"] for name, data in aspects.items()}
+    total_weighted = sum(weighted_scores.values())
+    max_weight = sum(a["weight"] for a in aspects.values())
+    predictive_index = round(total_weighted / max_weight, 1)
+
+    if predictive_index >= 8.5:
+        status = "🟢 GREEN – Strong Likelihood of Success"
+        color = "#00CC00"
+        advice_level = "Strong position – proceed with confidence."
+    elif predictive_index >= 6.5:
+        status = "🟡 YELLOW – Moderate Risk – Strengthen Now"
+        color = "#FFAA00"
+        advice_level = "Address gaps proactively."
+    else:
+        status = "🔴 RED – High Risk – Re-baseline Immediately"
+        color = "#FF4444"
+        advice_level = "Immediate corrective actions required."
+
+    st.subheader("🎯 Predictive Analysis Result")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown(f"<h2 style='color:{color};'>{status}</h2>", unsafe_allow_html=True)
+    with col2:
+        st.metric("Success Predictive Index", f"{predictive_index}/10.0")
+    st.progress(predictive_index / 10)
+
+    st.subheader("🔧 Responsive Advice")
+    weak_aspects = [(a, s, aspects[a]["weight"]) for a, s in inputs.items() if s <= 5]
+    weak_aspects.sort(key=lambda x: x[2], reverse=True)
+
+    if weak_aspects:
+        st.markdown("**Focus here first (highest impact issues):**")
+        for aspect, score, wt in weak_aspects[:7]:
+            st.warning(f"**{aspect}** (Score: {score}/10, Weight: {wt:.2f}) – {aspects[aspect]['desc']}")
+            if aspect in ["WBS Completeness", "Schedule Baseline Quality", "Risk Identification & Response"]:
+                st.info("→ Run Sticky Shuffle + add contingency buffer immediately.")
+            elif any(k in aspect for k in ["Compliance", "Grant", "Outcomes", "Funding"]):
+                st.info("→ Strengthen grant-specific elements.")
+            else:
+                st.info("→ Proactive fix now.")
+    else:
+        st.success("All aspects strong – Excellent foundation!")
+
+    st.markdown(f"**Overall Guidance:** {advice
