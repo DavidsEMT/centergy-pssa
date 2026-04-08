@@ -41,7 +41,7 @@ if not st.session_state.user:
         if st.button("Create Account", key="btn_signup"):
             try:
                 response = supabase.auth.sign_up({"email": email, "password": password})
-                st.success("Account created! Please check your email to confirm.")
+                st.success("✅ Account created! Please check your email for the confirmation link, click it, then return here and Sign In.")
             except Exception as e:
                 st.error(f"Sign-up failed: {str(e)}")
 
@@ -53,11 +53,13 @@ st.title(f"Centergy Group Project Success Simulator – {st.session_state.user.e
 
 tab_main, tab_admin = st.tabs(["📊 Main Simulator", "📈 Admin Dashboard"])
 
-# ====================== ADMIN DASHBOARD (Enhanced) ======================
+# ====================== ADMIN DASHBOARD ======================
 with tab_admin:
+    if st.session_state.user.email != "dmook@centergygroup.com":
+        st.error("🔒 Admin Dashboard is restricted to Centergy administrators only.")
+        st.stop()
+
     st.subheader("📈 Centergy Admin Overview Dashboard")
-    
-    # Fetch data
     all_projects = supabase.table("projects").select("id, name, user_id, created_at").execute().data
     total_projects = len(all_projects) if all_projects else 0
 
@@ -77,49 +79,31 @@ with tab_admin:
         red_count = len(df_feedback[df_feedback.get("actual_outcome", "").str.contains("Red", na=False)]) if not df_feedback.empty else 0
         st.metric("Red Outcomes", red_count)
 
-    # Trend over time
     if not df_feedback.empty:
+        st.subheader("📈 Predictive Index Trend Over Time")
         df_feedback["timestamp"] = pd.to_datetime(df_feedback["timestamp"], errors='coerce')
         df_feedback = df_feedback.dropna(subset=["timestamp"])
-        df_feedback = df_feedback.sort_values("timestamp")
-        
-        st.subheader("📈 Predictive Index Trend Over Time")
-        fig_trend = px.line(df_feedback, x="timestamp", y="predictive_index", 
-                           title="Average Predictive Index Trend", markers=True)
+        fig_trend = px.line(df_feedback, x="timestamp", y="predictive_index", title="Average Predictive Index Trend", markers=True)
         st.plotly_chart(fig_trend, use_container_width=True)
 
-    # Success Distribution
     if not df_feedback.empty:
         st.subheader("Success Distribution")
         outcome_counts = df_feedback["actual_outcome"].value_counts()
-        fig_pie = px.pie(names=outcome_counts.index, values=outcome_counts.values, 
-                        title="Actual Outcomes Across All Projects")
+        fig_pie = px.pie(names=outcome_counts.index, values=outcome_counts.values, title="Actual Outcomes Across All Projects")
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Grant Mode Comparison
-    if not df_feedback.empty and "grant_mode" in df_feedback.columns:
-        st.subheader("Grant Mode vs Normal Projects")
-        grant_stats = df_feedback.groupby("grant_mode")["predictive_index"].mean().round(1)
-        st.bar_chart(grant_stats, x_label="Grant Mode (False=Normal, True=Grant)", y_label="Avg Predictive Index")
-
-    # Recent Activity
     st.subheader("Recent Projects")
     if all_projects:
         df_projects = pd.DataFrame(all_projects)
         st.dataframe(df_projects[["name", "created_at"]].sort_values("created_at", ascending=False).head(10))
 
-    if not df_feedback.empty:
-        st.subheader("Recent Feedback")
-        st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome"]].sort_values("timestamp", ascending=False).head(15))
-
-    st.caption("Enhanced Admin Dashboard – Visible only to Centergy administrator")
+    st.caption("Admin Dashboard – Visible only to Centergy administrator")
 
 # ====================== MAIN SIMULATOR ======================
 with tab_main:
     # Sidebar
     with st.sidebar:
         st.header("My Projects")
-        
         if st.button("🔄 Refresh Projects", key="refresh_projects"):
             st.rerun()
         
@@ -162,7 +146,28 @@ with tab_main:
 
     st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
-    # Grant Mode
+    # DETAILED SCORING GUIDE – PERMANENTLY VISIBLE AT THE TOP (NO EXPANDER)
+    st.subheader("📖 Detailed Scoring Guide – How to Rate Each Aspect")
+    st.markdown("""
+    **Centergy-aligned scenario-based rubric for consistent scoring:**
+
+    | Aspect | Low (1–3) | Medium (4–6) | High (7–10) |
+    |--------|-----------|--------------|-------------|
+    | **WBS Completeness** | No WBS defined or only a high-level list of major deliverables | WBS is high-level with less than 10 elements, missing detailed constituents | WBS has depth, fully deliverables-oriented, with element constituents defined and validated by team/sponsor |
+    | **Stakeholder Alignment** | Little to no buy-in from key parties, stakeholders not engaged | Some engagement but not full commitment from all stakeholders | Clear, documented buy-in from team, client, sponsor, and all key stakeholders |
+    | **Schedule Baseline Quality** | No baseline schedule or critical path unknown | Rough schedule exists but Sticky Shuffle not run | Critical Path fully validated via Sticky Shuffle with realistic contingencies |
+    | **Cost Control Baseline** | No budget or only rough estimate | Basic budget exists with limited EVM-style tracking | Full budget with EVM-style forecasts, variance tracking, and cash-flow plan |
+    | **Risk Identification & Response** | No Risk Log or risks not documented | Basic risks listed without mitigation plans | Full Risk Log with Darwinian mitigation strategies, owners, and contingency reserves |
+    | **Team Experience & Capacity** | Major skill gaps and high learning curve | Adequate skills but some capacity constraints | Strong skills, low learning curve, and sufficient capacity confirmed |
+    | **Requirements Stability** | Requirements changing frequently with no control | Some changes expected and partially tracked | Requirements well-controlled with clear change management process |
+    | **Resource Availability** | Major shortages of people, tools, or funding | Partial availability with some gaps | People, tools, and funding fully secured and confirmed |
+    | **Lessons Learned Integration** | No review of past failures | Some lessons considered informally | Past failures proactively reviewed and avoided in current plan |
+    | **Communication & PUF Plan** | No formal communication plan | Basic updates planned | Full PUF-style proactive communication plan with regular updates |
+    | **Executive Support** | Little to no sponsor visibility or commitment | Moderate sponsor support | Strong, visible sponsor commitment with regular engagement |
+
+    **Grant Mode Aspects** (when enabled) use the same 1–10 scale with extra emphasis on compliance, outcomes, funding certainty, and funder alignment.
+    """)
+
     use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
     # Prediction Engine
@@ -300,18 +305,14 @@ with tab_main:
         )
         st.success("Report generated!")
 
-    # Feedback Form
     st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
 
     with st.form("feedback_form"):
         col_fb1, col_fb2 = st.columns(2)
         with col_fb1:
-            actual_result = st.selectbox("Actual Project Outcome", 
-                ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"])
+            actual_result = st.selectbox("Actual Project Outcome", ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"])
         with col_fb2:
-            notes = st.text_area("Notes / Lessons Learned", 
-                placeholder="What actually happened? (Grant-specific insights welcome)")
-        
+            notes = st.text_area("Notes / Lessons Learned", placeholder="What actually happened? (Grant-specific insights welcome)")
         submitted = st.form_submit_button("Submit Feedback & Update Model")
         if submitted:
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -329,7 +330,6 @@ with tab_main:
             except Exception as e:
                 st.error(f"Failed to save feedback: {str(e)}")
 
-    # View Feedback
     st.subheader("📋 View Feedback for This Project")
     feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
     feedback_data = feedback_response.data if feedback_response.data else []
@@ -340,4 +340,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v4.2 – Enhanced Admin Dashboard | Centergy Reality-Based Controls")
+    st.caption("PSSA v4.9 – Detailed Scoring Guide Permanently Visible at Top of Main Simulator | Centergy Reality-Based Controls")
