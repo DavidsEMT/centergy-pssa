@@ -9,13 +9,15 @@ st.set_page_config(page_title="Centergy Group Project Success Simulator", layout
 
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# Initialize session state once at the top
+# Robust session state initialization
 if "user" not in st.session_state:
     st.session_state.user = None
 if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
+if "last_update" not in st.session_state:
+    st.session_state.last_update = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -27,7 +29,7 @@ if not st.session_state.user:
 
     with tab1:
         email = st.text_input("Email", key="login_email")
-        password = st.text_input("Password", type="password", key="login_pass")  # native eye icon built-in
+        password = st.text_input("Password", type="password", key="login_pass")  # native eye icon
         if st.button("Sign In", key="btn_login"):
             try:
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
@@ -171,7 +173,7 @@ with tab_main:
 
     use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
-    # Prediction Engine with stable persistence
+    # Prediction Engine – stable sliders with persistence
     st.subheader("Rate Each Project Aspect (1–10)")
 
     aspects = {
@@ -196,7 +198,7 @@ with tab_main:
             "Proposal Alignment with Funder Priorities": {"weight": 0.08, "desc": "Project clearly ties to funder goals and priorities?"},
         })
 
-    # Load / initialize saved scores for this project
+    # Persistent scores per project
     score_key = f"scores_{st.session_state.current_project_id}"
     if score_key not in st.session_state:
         st.session_state[score_key] = {name: 7 for name in aspects}
@@ -207,12 +209,20 @@ with tab_main:
 
     for name, data in aspects.items():
         default_score = st.session_state[score_key].get(name, 7)
-        score = st.slider(f"{name}", 1, 10, default_score, help=data["desc"], key=f"slider_{name}_{st.session_state.current_project_id}")
+        score = st.slider(
+            f"{name}", 
+            1, 10, 
+            default_score, 
+            help=data["desc"], 
+            key=f"slider_{name}_{st.session_state.current_project_id}"
+        )
         inputs[name] = score
         weighted_scores[name] = score * data["weight"]
         aspect_data.append({"Aspect": name, "Score": score, "Weight": data["weight"]})
+        # Save immediately but without forced rerun
         st.session_state[score_key][name] = score
 
+    # Calculate index
     total_weighted = sum(weighted_scores.values())
     max_weight = sum(a["weight"] for a in aspects.values())
     predictive_index = round(total_weighted / max_weight, 1)
@@ -343,4 +353,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v5.4 – Clean Login + Ultra-Stable Session (No More Kick-Outs) | Centergy Reality-Based Controls")
+    st.caption("PSSA v5.5 – Ultra-Stable Sliders (No Kick-Outs) + Persistent Scores | Centergy Reality-Based Controls")
