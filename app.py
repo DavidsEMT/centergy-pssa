@@ -9,6 +9,7 @@ st.set_page_config(page_title="Centergy Group Project Success Simulator", layout
 
 supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
+# Initialize session state once at the top
 if "user" not in st.session_state:
     st.session_state.user = None
 if "current_project_id" not in st.session_state:
@@ -26,10 +27,7 @@ if not st.session_state.user:
 
     with tab1:
         email = st.text_input("Email", key="login_email")
-        password = st.text_input("Password", type="password", key="login_pass")
-        show_password = st.checkbox("Show password", key="show_login_pass")
-        if show_password:
-            st.text_input("Password", value=password, type="default", key="login_pass_visible", label_visibility="collapsed")
+        password = st.text_input("Password", type="password", key="login_pass")  # native eye icon built-in
         if st.button("Sign In", key="btn_login"):
             try:
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
@@ -173,7 +171,7 @@ with tab_main:
 
     use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
-    # Prediction Engine with persistence
+    # Prediction Engine with stable persistence
     st.subheader("Rate Each Project Aspect (1–10)")
 
     aspects = {
@@ -198,23 +196,22 @@ with tab_main:
             "Proposal Alignment with Funder Priorities": {"weight": 0.08, "desc": "Project clearly ties to funder goals and priorities?"},
         })
 
-    # Load saved scores for this project
-    if f"scores_{st.session_state.current_project_id}" not in st.session_state:
-        st.session_state[f"scores_{st.session_state.current_project_id}"] = {name: 7 for name in aspects}
+    # Load / initialize saved scores for this project
+    score_key = f"scores_{st.session_state.current_project_id}"
+    if score_key not in st.session_state:
+        st.session_state[score_key] = {name: 7 for name in aspects}
 
     inputs = {}
     weighted_scores = {}
     aspect_data = []
 
     for name, data in aspects.items():
-        default_score = st.session_state[f"scores_{st.session_state.current_project_id}"].get(name, 7)
-        score = st.slider(f"{name}", 1, 10, default_score, help=data["desc"], key=f"slider_{name}")
+        default_score = st.session_state[score_key].get(name, 7)
+        score = st.slider(f"{name}", 1, 10, default_score, help=data["desc"], key=f"slider_{name}_{st.session_state.current_project_id}")
         inputs[name] = score
         weighted_scores[name] = score * data["weight"]
         aspect_data.append({"Aspect": name, "Score": score, "Weight": data["weight"]})
-
-        # Save the score
-        st.session_state[f"scores_{st.session_state.current_project_id}"][name] = score
+        st.session_state[score_key][name] = score
 
     total_weighted = sum(weighted_scores.values())
     max_weight = sum(a["weight"] for a in aspects.values())
@@ -275,11 +272,9 @@ with tab_main:
         report_md += f"**Project:** {st.session_state.current_project_name}\n"
         report_md += f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
         report_md += f"**Grant Mode:** {'Yes' if use_grant_mode else 'No'}\n\n"
-        
         report_md += f"## 🎯 Predictive Analysis Result\n"
         report_md += f"**Status:** {status}\n"
         report_md += f"**Success Predictive Index:** {predictive_index}/10.0\n\n"
-        
         report_md += f"## 🔧 Responsive Advice\n"
         if weak_aspects:
             report_md += "**Priority Issues:**\n"
@@ -287,15 +282,12 @@ with tab_main:
                 report_md += f"- **{aspect}** (Score: {score}/10) – {aspects[aspect]['desc']}\n"
         else:
             report_md += "All aspects are strong – Excellent foundation!\n"
-        
         report_md += f"\n**Overall Guidance:** {advice_level}\n\n"
-        
         report_md += f"## 📊 Aspect Scores\n"
         report_md += "| Aspect | Score | Weight |\n"
         report_md += "|--------|-------|--------|\n"
         for row in aspect_data:
             report_md += f"| {row['Aspect']} | {row['Score']} | {row['Weight']:.2f} |\n"
-        
         report_md += f"\n## 📋 Feedback History\n"
         feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
         feedback_data = feedback_response.data if feedback_response.data else []
@@ -351,4 +343,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v5.3 – Persistent Scores + Fixed Password Visibility + Scoring Guide Always Visible | Centergy Reality-Based Controls")
+    st.caption("PSSA v5.4 – Clean Login + Ultra-Stable Session (No More Kick-Outs) | Centergy Reality-Based Controls")
