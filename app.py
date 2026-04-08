@@ -27,6 +27,9 @@ if not st.session_state.user:
     with tab1:
         email = st.text_input("Email", key="login_email")
         password = st.text_input("Password", type="password", key="login_pass")
+        show_password = st.checkbox("Show password", key="show_login_pass")
+        if show_password:
+            st.text_input("Password", value=password, type="text", key="login_pass_visible", label_visibility="collapsed")
         if st.button("Sign In", key="btn_login"):
             try:
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
@@ -55,7 +58,6 @@ tab_main, tab_admin = st.tabs(["📊 Main Simulator", "📈 Admin Dashboard"])
 
 # ====================== ADMIN DASHBOARD ======================
 with tab_admin:
-    # Allow both dmook and jdaniels as admins
     if st.session_state.user.email not in ["dmook@centergygroup.com", "jdaniels@centergygroup.com"]:
         st.error("🔒 Admin Dashboard is restricted to Centergy administrators only.")
         st.stop()
@@ -171,7 +173,7 @@ with tab_main:
 
     use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
-    # Prediction Engine
+    # Prediction Engine with persistence
     st.subheader("Rate Each Project Aspect (1–10)")
 
     aspects = {
@@ -196,15 +198,29 @@ with tab_main:
             "Proposal Alignment with Funder Priorities": {"weight": 0.08, "desc": "Project clearly ties to funder goals and priorities?"},
         })
 
+    # Load saved scores if they exist
+    saved_scores = {}
+    if st.session_state.current_project_id:
+        # For now, we use a simple approach - scores are stored per project in session_state for this session
+        # In a future version we can persist them to a new table
+        if f"scores_{st.session_state.current_project_id}" not in st.session_state:
+            st.session_state[f"scores_{st.session_state.current_project_id}"] = {name: 7 for name in aspects}
+
     inputs = {}
     weighted_scores = {}
     aspect_data = []
 
     for name, data in aspects.items():
-        score = st.slider(f"{name}", 1, 10, 7, help=data["desc"], key=name)
+        default_score = st.session_state.get(f"scores_{st.session_state.current_project_id}", {}).get(name, 7)
+        score = st.slider(f"{name}", 1, 10, default_score, help=data["desc"], key=f"slider_{name}")
         inputs[name] = score
         weighted_scores[name] = score * data["weight"]
         aspect_data.append({"Aspect": name, "Score": score, "Weight": data["weight"]})
+
+        # Save the score for this project
+        if f"scores_{st.session_state.current_project_id}" not in st.session_state:
+            st.session_state[f"scores_{st.session_state.current_project_id}"] = {}
+        st.session_state[f"scores_{st.session_state.current_project_id}"][name] = score
 
     total_weighted = sum(weighted_scores.values())
     max_weight = sum(a["weight"] for a in aspects.values())
@@ -341,4 +357,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v5.1 – Scoring Guide Permanently Visible at Top | Centergy Reality-Based Controls")
+    st.caption("PSSA v5.2 – Persistent Scores + No Kick-Outs + Scoring Guide Always Visible | Centergy Reality-Based Controls")
