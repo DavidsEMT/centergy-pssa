@@ -260,4 +260,92 @@ with tab_main:
     else:
         st.success("All aspects strong – Excellent foundation!")
 
-    st.markdown(f"**Overall Guidance:** {advice
+    st.markdown(f"**Overall Guidance:** {advice_level}")
+
+    # Charts
+    st.subheader("📊 Visual Project Aspects Analysis")
+    df_aspects = pd.DataFrame(aspect_data).sort_values("Score", ascending=True)
+    fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
+                     title="Aspect Scores (Higher = Better)",
+                     color="Score", color_continuous_scale="RdYlGn")
+    fig_bar.update_layout(height=500)
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    # Export Report
+    if st.button("📄 Export Full Project Report (Markdown)"):
+        report_md = f"# Centergy Group Project Success Simulator Report\n\n"
+        report_md += f"**Project:** {st.session_state.current_project_name}\n"
+        report_md += f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+        report_md += f"**Grant Mode:** {'Yes' if use_grant_mode else 'No'}\n\n"
+        report_md += f"## 🎯 Predictive Analysis Result\n"
+        report_md += f"**Status:** {status}\n"
+        report_md += f"**Success Predictive Index:** {predictive_index}/10.0\n\n"
+        report_md += f"## 🔧 Responsive Advice\n"
+        if weak_aspects:
+            report_md += "**Priority Issues:**\n"
+            for aspect, score, wt in weak_aspects[:7]:
+                report_md += f"- **{aspect}** (Score: {score}/10) – {aspects[aspect]['desc']}\n"
+        else:
+            report_md += "All aspects are strong – Excellent foundation!\n"
+        report_md += f"\n**Overall Guidance:** {advice_level}\n\n"
+        report_md += f"## 📊 Aspect Scores\n"
+        report_md += "| Aspect | Score | Weight |\n"
+        report_md += "|--------|-------|--------|\n"
+        for row in aspect_data:
+            report_md += f"| {row['Aspect']} | {row['Score']} | {row['Weight']:.2f} |\n"
+        report_md += f"\n## 📋 Feedback History\n"
+        feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
+        feedback_data = feedback_response.data if feedback_response.data else []
+        if feedback_data:
+            report_md += "| Timestamp | Predictive Index | Actual Outcome | Notes |\n"
+            report_md += "|-----------|------------------|----------------|-------|\n"
+            for fb in feedback_data:
+                notes_clean = (fb.get("notes") or "").replace("|", "\\|").replace("\n", " ")
+                report_md += f"| {fb.get('timestamp','')} | {fb.get('predictive_index','')} | {fb.get('actual_outcome','')} | {notes_clean} |\n"
+        else:
+            report_md += "No feedback recorded yet.\n"
+        
+        st.download_button(
+            label="⬇️ Download Report Now",
+            data=report_md,
+            file_name=f"Centergy_PSSA_Report_{st.session_state.current_project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+            mime="text/markdown"
+        )
+        st.success("Report generated!")
+
+    st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
+
+    with st.form("feedback_form"):
+        col_fb1, col_fb2 = st.columns(2)
+        with col_fb1:
+            actual_result = st.selectbox("Actual Project Outcome", ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"])
+        with col_fb2:
+            notes = st.text_area("Notes / Lessons Learned", placeholder="What actually happened? (Grant-specific insights welcome)")
+        submitted = st.form_submit_button("Submit Feedback & Update Model")
+        if submitted:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            try:
+                supabase.table("feedback").insert({
+                    "project_id": st.session_state.current_project_id,
+                    "timestamp": now,
+                    "predictive_index": predictive_index,
+                    "actual_outcome": actual_result,
+                    "notes": notes,
+                    "grant_mode": use_grant_mode
+                }).execute()
+                st.success("✅ Feedback saved successfully for this project!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to save feedback: {str(e)}")
+
+    st.subheader("📋 View Feedback for This Project")
+    feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
+    feedback_data = feedback_response.data if feedback_response.data else []
+
+    if feedback_data:
+        df_feedback = pd.DataFrame(feedback_data)
+        st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
+    else:
+        st.info("No feedback recorded for this project yet.")
+
+    st.caption("PSSA v5.6 – Form-Based Sliders (No Kick-Outs) + Persistent Scores | Centergy Reality-Based Controls")
