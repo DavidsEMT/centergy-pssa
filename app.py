@@ -16,8 +16,6 @@ if "current_project_id" not in st.session_state:
     st.session_state.current_project_id = None
 if "current_project_name" not in st.session_state:
     st.session_state.current_project_name = None
-if "last_update" not in st.session_state:
-    st.session_state.last_update = 0
 
 # ====================== LOGIN SCREEN ======================
 if not st.session_state.user:
@@ -29,7 +27,7 @@ if not st.session_state.user:
 
     with tab1:
         email = st.text_input("Email", key="login_email")
-        password = st.text_input("Password", type="password", key="login_pass")  # native eye icon
+        password = st.text_input("Password", type="password", key="login_pass")
         if st.button("Sign In", key="btn_login"):
             try:
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
@@ -173,7 +171,7 @@ with tab_main:
 
     use_grant_mode = st.checkbox("Enable Grant Mode (NGO / Government Submissions)", value=False)
 
-    # Prediction Engine – stable sliders with persistence
+    # Stable form for sliders - this is the key fix for kick-outs
     st.subheader("Rate Each Project Aspect (1–10)")
 
     aspects = {
@@ -198,159 +196,6 @@ with tab_main:
             "Proposal Alignment with Funder Priorities": {"weight": 0.08, "desc": "Project clearly ties to funder goals and priorities?"},
         })
 
-    # Persistent scores per project
     score_key = f"scores_{st.session_state.current_project_id}"
     if score_key not in st.session_state:
-        st.session_state[score_key] = {name: 7 for name in aspects}
-
-    inputs = {}
-    weighted_scores = {}
-    aspect_data = []
-
-    for name, data in aspects.items():
-        default_score = st.session_state[score_key].get(name, 7)
-        score = st.slider(
-            f"{name}", 
-            1, 10, 
-            default_score, 
-            help=data["desc"], 
-            key=f"slider_{name}_{st.session_state.current_project_id}"
-        )
-        inputs[name] = score
-        weighted_scores[name] = score * data["weight"]
-        aspect_data.append({"Aspect": name, "Score": score, "Weight": data["weight"]})
-        # Save immediately but without forced rerun
-        st.session_state[score_key][name] = score
-
-    # Calculate index
-    total_weighted = sum(weighted_scores.values())
-    max_weight = sum(a["weight"] for a in aspects.values())
-    predictive_index = round(total_weighted / max_weight, 1)
-
-    if predictive_index >= 8.5:
-        status = "🟢 GREEN – Strong Likelihood of Success"
-        color = "#00CC00"
-        advice_level = "Strong position – proceed with confidence."
-    elif predictive_index >= 6.5:
-        status = "🟡 YELLOW – Moderate Risk – Strengthen Now"
-        color = "#FFAA00"
-        advice_level = "Address gaps proactively."
-    else:
-        status = "🔴 RED – High Risk – Re-baseline Immediately"
-        color = "#FF4444"
-        advice_level = "Immediate corrective actions required."
-
-    st.subheader("🎯 Predictive Analysis Result")
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"<h2 style='color:{color};'>{status}</h2>", unsafe_allow_html=True)
-    with col2:
-        st.metric("Success Predictive Index", f"{predictive_index}/10.0")
-    st.progress(predictive_index / 10)
-
-    st.subheader("🔧 Responsive Advice")
-    weak_aspects = [(a, s, aspects[a]["weight"]) for a, s in inputs.items() if s <= 5]
-    weak_aspects.sort(key=lambda x: x[2], reverse=True)
-
-    if weak_aspects:
-        st.markdown("**Focus here first (highest impact issues):**")
-        for aspect, score, wt in weak_aspects[:7]:
-            st.warning(f"**{aspect}** (Score: {score}/10, Weight: {wt:.2f}) – {aspects[aspect]['desc']}")
-            if aspect in ["WBS Completeness", "Schedule Baseline Quality", "Risk Identification & Response"]:
-                st.info("→ Run Sticky Shuffle + add contingency buffer immediately.")
-            elif any(k in aspect for k in ["Compliance", "Grant", "Outcomes", "Funding"]):
-                st.info("→ Strengthen grant-specific elements.")
-            else:
-                st.info("→ Proactive fix now.")
-    else:
-        st.success("All aspects strong – Excellent foundation!")
-
-    st.markdown(f"**Overall Guidance:** {advice_level}")
-
-    # Charts
-    st.subheader("📊 Visual Project Aspects Analysis")
-    df_aspects = pd.DataFrame(aspect_data).sort_values("Score", ascending=True)
-    fig_bar = px.bar(df_aspects, x="Score", y="Aspect", orientation='h',
-                     title="Aspect Scores (Higher = Better)",
-                     color="Score", color_continuous_scale="RdYlGn")
-    fig_bar.update_layout(height=500)
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-    # Export Report
-    if st.button("📄 Export Full Project Report (Markdown)"):
-        report_md = f"# Centergy Group Project Success Simulator Report\n\n"
-        report_md += f"**Project:** {st.session_state.current_project_name}\n"
-        report_md += f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
-        report_md += f"**Grant Mode:** {'Yes' if use_grant_mode else 'No'}\n\n"
-        report_md += f"## 🎯 Predictive Analysis Result\n"
-        report_md += f"**Status:** {status}\n"
-        report_md += f"**Success Predictive Index:** {predictive_index}/10.0\n\n"
-        report_md += f"## 🔧 Responsive Advice\n"
-        if weak_aspects:
-            report_md += "**Priority Issues:**\n"
-            for aspect, score, wt in weak_aspects[:7]:
-                report_md += f"- **{aspect}** (Score: {score}/10) – {aspects[aspect]['desc']}\n"
-        else:
-            report_md += "All aspects are strong – Excellent foundation!\n"
-        report_md += f"\n**Overall Guidance:** {advice_level}\n\n"
-        report_md += f"## 📊 Aspect Scores\n"
-        report_md += "| Aspect | Score | Weight |\n"
-        report_md += "|--------|-------|--------|\n"
-        for row in aspect_data:
-            report_md += f"| {row['Aspect']} | {row['Score']} | {row['Weight']:.2f} |\n"
-        report_md += f"\n## 📋 Feedback History\n"
-        feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
-        feedback_data = feedback_response.data if feedback_response.data else []
-        if feedback_data:
-            report_md += "| Timestamp | Predictive Index | Actual Outcome | Notes |\n"
-            report_md += "|-----------|------------------|----------------|-------|\n"
-            for fb in feedback_data:
-                notes_clean = (fb.get("notes") or "").replace("|", "\\|").replace("\n", " ")
-                report_md += f"| {fb.get('timestamp','')} | {fb.get('predictive_index','')} | {fb.get('actual_outcome','')} | {notes_clean} |\n"
-        else:
-            report_md += "No feedback recorded yet.\n"
-        
-        st.download_button(
-            label="⬇️ Download Report Now",
-            data=report_md,
-            file_name=f"Centergy_PSSA_Report_{st.session_state.current_project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
-            mime="text/markdown"
-        )
-        st.success("Report generated!")
-
-    st.subheader("📊 Actual Outcome Feedback (Help the App Learn)")
-
-    with st.form("feedback_form"):
-        col_fb1, col_fb2 = st.columns(2)
-        with col_fb1:
-            actual_result = st.selectbox("Actual Project Outcome", ["Success (Green)", "Partial Success (Yellow)", "Failure (Red)", "Not yet complete"])
-        with col_fb2:
-            notes = st.text_area("Notes / Lessons Learned", placeholder="What actually happened? (Grant-specific insights welcome)")
-        submitted = st.form_submit_button("Submit Feedback & Update Model")
-        if submitted:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M")
-            try:
-                supabase.table("feedback").insert({
-                    "project_id": st.session_state.current_project_id,
-                    "timestamp": now,
-                    "predictive_index": predictive_index,
-                    "actual_outcome": actual_result,
-                    "notes": notes,
-                    "grant_mode": use_grant_mode
-                }).execute()
-                st.success("✅ Feedback saved successfully for this project!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to save feedback: {str(e)}")
-
-    st.subheader("📋 View Feedback for This Project")
-    feedback_response = supabase.table("feedback").select("*").eq("project_id", st.session_state.current_project_id).execute()
-    feedback_data = feedback_response.data if feedback_response.data else []
-
-    if feedback_data:
-        df_feedback = pd.DataFrame(feedback_data)
-        st.dataframe(df_feedback[["timestamp", "predictive_index", "actual_outcome", "notes"]])
-    else:
-        st.info("No feedback recorded for this project yet.")
-
-    st.caption("PSSA v5.5 – Ultra-Stable Sliders (No Kick-Outs) + Persistent Scores | Centergy Reality-Based Controls")
+        st.session_state[score_key] = {name: 7 for name in
