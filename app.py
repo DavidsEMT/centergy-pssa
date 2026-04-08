@@ -55,7 +55,8 @@ tab_main, tab_admin = st.tabs(["📊 Main Simulator", "📈 Admin Dashboard"])
 
 # ====================== ADMIN DASHBOARD ======================
 with tab_admin:
-    if st.session_state.user.email != "dmook@centergygroup.com":
+    # Allow both dmook and jdaniels as admins
+    if st.session_state.user.email not in ["dmook@centergygroup.com", "jdaniels@centergygroup.com"]:
         st.error("🔒 Admin Dashboard is restricted to Centergy administrators only.")
         st.stop()
 
@@ -97,11 +98,11 @@ with tab_admin:
         df_projects = pd.DataFrame(all_projects)
         st.dataframe(df_projects[["name", "created_at"]].sort_values("created_at", ascending=False).head(10))
 
-    st.caption("Admin Dashboard – Visible only to Centergy administrator")
+    st.caption("Admin Dashboard – Visible only to Centergy administrators")
 
 # ====================== MAIN SIMULATOR ======================
 with tab_main:
-    # Sidebar - Projects
+    # Sidebar
     with st.sidebar:
         st.header("My Projects")
         if st.button("🔄 Refresh Projects", key="refresh_projects"):
@@ -340,4 +341,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v5.0 – Scoring Guide Permanently Visible at Top of Main Simulator | Centergy Reality-Based Controls")
+    st.caption("PSSA v5.1 – Scoring Guide Permanently Visible at Top | Centergy Reality-Based Controls")
