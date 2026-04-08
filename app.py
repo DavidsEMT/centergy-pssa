@@ -101,7 +101,7 @@ with tab_admin:
 
 # ====================== MAIN SIMULATOR ======================
 with tab_main:
-    # Sidebar
+    # Sidebar - Projects
     with st.sidebar:
         st.header("My Projects")
         if st.button("🔄 Refresh Projects", key="refresh_projects"):
@@ -146,7 +146,7 @@ with tab_main:
 
     st.subheader(f"Current Project: {st.session_state.current_project_name}")
 
-    # DETAILED SCORING GUIDE – PERMANENTLY VISIBLE AT THE VERY TOP
+    # DETAILED SCORING GUIDE – PERMANENTLY VISIBLE AT THE TOP
     st.subheader("📖 Detailed Scoring Guide – How to Rate Each Aspect")
     st.markdown("""
     **Centergy-aligned scenario-based rubric for consistent scoring:**
@@ -340,4 +340,4 @@ with tab_main:
     else:
         st.info("No feedback recorded for this project yet.")
 
-    st.caption("PSSA v5.0 – Detailed Scoring Guide Permanently Visible at Top | Centergy Reality-Based Controls")
+    st.caption("PSSA v5.0 – Scoring Guide Permanently Visible at Top of Main Simulator | Centergy Reality-Based Controls")
